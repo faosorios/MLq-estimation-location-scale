@@ -1,5 +1,5 @@
-MVLq <-
-function(x, data, subset, na.action, q.par = 1, maxiter = 500, tol = 1e-6)
+MLq <-
+function(x, data, subset, na.action, qpar = 1, maxiter = 500, tol = 1e-6)
 {
   Call <- match.call()
   if (missing(x))
@@ -11,7 +11,7 @@ function(x, data, subset, na.action, q.par = 1, maxiter = 500, tol = 1e-6)
     attr(mt, "intercept") <- 0
     mf <- match.call(expand.dots = FALSE)
     names(mf)[names(mf) == "x"] <- "formula"
-    mf$q.par <- mf$maxiter <- mf$tol <- NULL
+    mf$qpar <- mf$maxiter <- mf$tol <- NULL
     mf[[1L]] <- as.name("model.frame")
     mf <- eval.parent(mf)
     na.act <- attr(mf, "na.action")
@@ -27,7 +27,7 @@ function(x, data, subset, na.action, q.par = 1, maxiter = 500, tol = 1e-6)
       z <- na.fail(z)
   }
   if (!is.numeric(z))
-    stop("MVLq applies only to numerical variables")
+    stop("MLq applies only to numerical variables")
   znames <- dimnames(z)[[2]]
   dz <- dim(z)
   n <- dz[1]
@@ -41,21 +41,21 @@ function(x, data, subset, na.action, q.par = 1, maxiter = 500, tol = 1e-6)
   center <- obj$center
   Sigma <- obj$cov
   theta <- c(center, Sigma[lower.tri(Sigma, diag = TRUE)])
-  
+
   ## iterative loop
   now <- proc.time()
   repeat {
     # weigths computation
     distances <- mahalanobis(z, center, Sigma)
-    val <- det(Sigma)^(-.5 * (1 - q.par))
-    val <- val * (2 * pi)^(-p * (1 - q.par))
-    wts <- val * exp(-.5 * (1 - q.par) * distances)
-    
+    val <- det(Sigma)^(-.5 * (1 - qpar))
+    val <- val * (2 * pi)^(-p * (1 - qpar))
+    wts <- val * exp(-.5 * (1 - qpar) * distances)
+
     # updating estimates
     obj <- cov.wt(z, wt = wts, center = TRUE, method = "ML")
     new.center <- obj$center
     new.Sigma <- obj$cov
-    
+
     # eval convergence
     iter <- iter + 1
     new.theta <- c(new.center, new.Sigma[lower.tri(new.Sigma, diag = TRUE)])
@@ -78,15 +78,16 @@ function(x, data, subset, na.action, q.par = 1, maxiter = 500, tol = 1e-6)
               dims = dz,
               center = new.center,
               Sigma = new.Sigma,
-              numiter = iter,
+              qpar = qpar,
               weights = wts,
               distances = distances,
+              iterations = iter,
               speed = speed)
-  class(out) <- "MVLq"
+  class(out) <- "MLq"
   out
 }
 
-print.MVLq <-
+print.MLq <-
 function(x, digits = 4, ...)
 {
   ## local functions
