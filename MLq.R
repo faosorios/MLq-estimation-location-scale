@@ -77,7 +77,7 @@ function(x, data, subset, na.action, qpar = 1, maxiter = 500, tol = 1e-6)
               x = z,
               dims = dz,
               center = new.center,
-              Sigma = new.Sigma,
+              Sigma = qpar * new.Sigma,
               qpar = qpar,
               weights = wts,
               distances = distances,
