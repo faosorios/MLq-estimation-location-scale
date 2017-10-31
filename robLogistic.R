@@ -1,7 +1,10 @@
+## Id: robLogistic.R
+## Author: Felipe Osorio
+## Last update: 10-31-2017.
 
 robLogistic <-
 function(formula, data, subset, na.action, qpar = 1, control = glm.control(),
-  model = TRUE, x = FALSE, y = TRUE, contrasts = NULL, ...)
+  model = TRUE, x = TRUE, y = TRUE, contrasts = NULL, ...)
 {
   # support functions
   linkfun <- function(mu) log(mu / (1 - mu))
@@ -54,7 +57,7 @@ function(formula, data, subset, na.action, qpar = 1, control = glm.control(),
     rob.wts <- exp((1 - qpar) * (y * eta - kernel(eta)))
     k    <- exp(qpar * kernel(eta) - kernel(qpar * eta))
     wts  <- k * variance(mu)
-    z    <- eta + rob.wts * (y - mu) / wts
+    z    <- eta + rob.wts * (y - mu) / (qpar * wts)
     fit  <- lsfit(x, z, wt = wts, intercept = FALSE)
     coef <- fit$coef
 
@@ -77,6 +80,7 @@ function(formula, data, subset, na.action, qpar = 1, control = glm.control(),
   speed <- proc.time() - now
   ## creating the output object
   mu <- linkinv(eta)
+  R <- qr.R(qr(sqrt(wts) * x))
   out <- list(call = Call,
               dims = dims,
               qpar = qpar,
@@ -86,11 +90,20 @@ function(formula, data, subset, na.action, qpar = 1, control = glm.control(),
               residuals = y - mu,
               numIter = iter,
               control = control,
+              weights = wts,
               rob.weights = rob.wts,
               rank = rank,
               df.null = nulldf,
               df.residual = resdf,
+              R = R,
               speed = speed)
+  out$terms <- Terms
+  if (model)
+    out$model <- mf
+  if (ret.y)
+    out$y <- y
+  if (ret.x)
+    out$x <- x
   class(out) <- "logistic"
   out
 }
@@ -107,6 +120,43 @@ print.logistic <- function(x, digits = max(3, getOption("digits") - 3), ...)
   else
     cat("No coefficients\n\n")
   cat("\nDistortion parameter:", x$qpar)
-  cat("\nDegrees of Freedom:", x$df.null, "Total;", x$df.residual, "Residual\n")
+  cat("\nDegrees of Freedom:", x$df.null, "total;", x$df.residual, "residual\n")
+  invisible(x)
+}
+
+summary.logistic <-
+function (object, ...)
+{
+  z <- object
+  p <- z$dims[2]
+  R <- solve(z$R)
+  cov.unscaled <- R %*% t(R)
+  qpar <- z$qpar
+  se <- qpar * sqrt((2. - qpar) * diag(cov.unscaled))
+  est <- z$coefficients
+  zval <- est / se
+  ans <- z[c("call", "terms")]
+  ans$dims <- z$dims
+  ans$rank <- z$rank
+  ans$qpar <- qpar
+  ans$coefficients <- cbind(est, se, zval, 2 * pnorm(abs(zval), lower.tail = FALSE))
+  dimnames(ans$coefficients) <- list(names(z$coefficients),
+        c("Estimate", "Std.Error", "Z value", "p-value"))
+  class(ans) <- "summary.logistic"
+  ans
+}
+
+print.summary.logistic <-
+function(x, digits = 4, ...)
+{
+  cat("Call:\n")
+  dput(x$call, control = NULL)
+  resid <- x$residuals
+  nobs <- x$dims[1]
+  rdf <- nobs - x$rank
+  cat("\nCoefficients:\n ")
+  print(format(round(x$coef, digits = digits)), quote = F, ...)
+  cat("\nDistortion parameter:", x$qpar)
+  cat("\nDegrees of freedom:", nobs, "total;", rdf, "residual\n")
   invisible(x)
 }
