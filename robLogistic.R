@@ -23,7 +23,6 @@ function(formula, data, subset, na.action, qpar = 1, control = glm.control(),
   mf <- match.call(expand.dots = FALSE)
   mf$qpar <- mf$control <- mf$model <- mf$x <- mf$y <- mf$contrasts <- NULL
   mf$... <- NULL
-  # mf$drop.unused.levels <- TRUE
   mf[[1]] <- as.name("model.frame")
   mf <- eval(mf, parent.frame())
   Terms <- attr(mf, "terms")
