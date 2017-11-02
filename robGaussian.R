@@ -31,7 +31,7 @@ function(x, data, subset, na.action, qpar = 1, maxiter = 200, tol = 1e-6)
       z <- na.fail(z)
   }
   if (!is.numeric(z))
-    stop("gaussianMLq applies only to numerical variables")
+    stop("robGaussian applies only to numerical variables")
   znames <- dimnames(z)[[2]]
   dz <- dim(z)
   n <- dz[1]
